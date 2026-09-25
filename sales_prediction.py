@@ -112,7 +112,9 @@ def main() -> None:
     parser.add_argument("--train", type=Path, default=Path("train.csv"))
     parser.add_argument("--test", type=Path, default=Path("test.csv"))
     parser.add_argument(
-        "--sample-submission", type=Path, default=Path("sample_submission.csv")
+        "--sample-submission",
+        type=Path,
+        default=Path.home() / "Downloads" / "sample_submission.csv",
     )
     parser.add_argument("--output", type=Path, default=Path("submission.csv"))
     args = parser.parse_args()
@@ -176,6 +178,14 @@ def main() -> None:
         submission = pd.read_csv(args.sample_submission)
         if len(submission) != len(test_predictions):
             raise ValueError("Sample submission row count does not match test.csv.")
+        if "id" in test.columns and "id" in submission.columns:
+            prediction_by_id = pd.Series(
+                test_predictions, index=test["id"].astype(str)
+            )
+            sample_ids = submission["id"].astype(str)
+            if not sample_ids.isin(prediction_by_id.index).all():
+                raise ValueError("Sample submission IDs do not match test.csv IDs.")
+            test_predictions = sample_ids.map(prediction_by_id).to_numpy()
         submission_target = next(
             (
                 column
